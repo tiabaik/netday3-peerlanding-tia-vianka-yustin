@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Data;
+using System.Security.Claims;
 using System.Text;
 
 namespace BEPeer.Controllers
@@ -44,8 +45,8 @@ namespace BEPeer.Controllers
                         Data = errors
                     });
                 }
-
-                var res = await _loanServices.CreateLoan(loan);
+                var userId = HttpContext.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Sid).Value;
+                var res = await _loanServices.CreateLoan(loan, userId);
 
                 return Ok(new ResBaseDto<string>
                 {
@@ -137,6 +138,60 @@ namespace BEPeer.Controllers
             }
         }
 
+        [HttpGet]
+        [Authorize]
+        public async Task<IActionResult> LoanBorrowerList()
+        {
+            try
+            {
+                var users = await _loanServices.LoanBorrowerList();
+
+                return Ok(new ResBaseDto<List<ResListLoadBorrowerAcc>>
+                {
+                    Success = true,
+                    Message = "List of LOands",
+                    Data = users
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new ResBaseDto<object>
+                {
+                    Success = false,
+                    Message = ex.Message,
+                    Data = null
+                });
+
+            }
+        }
+
+        [HttpGet]
+        [Authorize]
+        public async Task<IActionResult> LoanBorrowerListbyId()
+        {
+            try
+            {
+                var userId = HttpContext.User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Sid).Value;
+                var loan = await _loanServices.LoanBorrowerListbyId(userId);
+
+                return Ok(new ResBaseDto<List<ResListLoanBorrowerbyId>>
+                {
+                    Success = true,
+                    Message = "List of LOands",
+                    Data = loan
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new ResBaseDto<object>
+                {
+                    Success = false,
+                    Message = ex.Message,
+                    Data = null
+                });
+
+            }
+        }
     }
 
 }

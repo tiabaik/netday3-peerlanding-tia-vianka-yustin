@@ -30,7 +30,7 @@ namespace DAL.Models
         [Required]
         [Column("duration_month")]
 
-        public int Duration { get; set; }
+        public int Duration { get; set; } = 12;
         [Required]
         [Column("status")]
 

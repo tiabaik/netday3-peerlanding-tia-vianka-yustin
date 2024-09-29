@@ -1,5 +1,6 @@
 ﻿using DAL.DTO.Req;
 using DAL.DTO.Res;
+using DAL.Repositories.Service;
 using DAL.Repositories.Service.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -20,7 +21,7 @@ namespace BEPeer.Controllers
         }
 
         [HttpPost]
-        //[Authorize(Roles = "admin")]
+        [Authorize(Roles = "admin")]
         public async Task<IActionResult> Register(ReqRegisterUseerDto register)
         {
             try
@@ -201,6 +202,68 @@ namespace BEPeer.Controllers
             catch (Exception ex)
             {
                 return StatusCode(StatusCodes.Status500InternalServerError, new ResBaseDto<object>
+                {
+                    Success = false,
+                    Message = ex.Message,
+                    Data = null
+                });
+            }
+        }
+
+        [HttpGet("id")]
+        public async Task<IActionResult> UserList(string id)
+        {
+            try
+            {
+                var users = await _userServices.UserList(id);
+
+                return Ok(new ResBaseDto<ResUserDtobyId>
+                {
+                    Success = true,
+                    Message = "Get By Id Of Users Retrieved Sucessfully",
+                    Data = users
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new ResBaseDto<object>
+                {
+                    Success = false,
+                    Message = ex.Message,
+                    Data = null
+                });
+
+            }
+        }
+
+        [HttpPut]
+        [Authorize]
+        public async Task<IActionResult> UpdateSaldo(ReqUpdateBalance _updateBalance, string id)
+        {
+            try
+            {
+                var updateSal = await _userServices.UpdateBalance(_updateBalance, id);
+                return Ok(new ResBaseDto<object>
+                {
+                    Success = true,
+                    Message = "Succes Updating Balance",
+                    Data = updateSal
+                });
+
+            }
+            catch (Exception ex)
+            {
+                if (ex.Message == "User did not exist")
+                {
+                    return BadRequest(new ResBaseDto<string>
+                    {
+                        Success = false,
+                        Message = ex.Message,
+                        Data = null
+                    });
+                }
+
+                return StatusCode(StatusCodes.Status500InternalServerError, new ResBaseDto<string>
                 {
                     Success = false,
                     Message = ex.Message,

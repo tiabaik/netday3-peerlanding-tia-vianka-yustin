@@ -20,14 +20,13 @@ namespace DAL.Repositories.Service
         {
             _peerlandingContext = peerlandingContext;
         }
-        public async Task<string> CreateLoan(ReqLoanDto loan)
+        public async Task<string> CreateLoan(ReqLoanDto loan, string id)
         {
             var newLoan = new MstLoans
             {
-                BorrowerId = loan.BorrowerId,
+                BorrowerId = id,
                 Amount = loan.Amount,
-                InterestRate = loan.InterestRate,
-                Duration = loan.Duration,
+                InterestRate = loan.InterestRate
             };
 
             await _peerlandingContext.AddAsync(newLoan);
@@ -71,5 +70,86 @@ namespace DAL.Repositories.Service
                   }).ToListAsync();
             return listLoan;
         }
+
+        public async Task<List<ResListLoadBorrowerAcc>> LoanBorrowerList()
+        {
+            // Misalkan status yang diinginkan adalah "required"
+            string requiredStatus = "requested";
+
+            var listLoan = await _peerlandingContext.MstLoans
+                .Where(x => x.Status == requiredStatus)  // Ganti dengan membandingkan status secara langsung
+                .OrderByDescending(x => x.CreatedAt)
+                .Select(x => new ResListLoadBorrowerAcc
+                {
+                    LoanId = x.Id,
+                    BorrowerName = x.User.Name,
+                    Amount = x.Amount,
+                    InterestRate = x.InterestRate,
+                    Duration = x.Duration,
+                    Status = x.Status,
+                    CreatedAt = x.CreatedAt,
+                    UpdatedAt = x.UpdatedAt
+                }).ToListAsync();
+
+            return listLoan;
+        }
+
+        public async Task<List<ResListLoanBorrowerbyId>> LoanBorrowerListbyId( string borrowerId)
+        {
+            
+
+            
+            var listLoan = await _peerlandingContext.MstLoans
+                .Where(x => x.BorrowerId == borrowerId) // Filter berdasarkan BorrowerId (UserId)
+                .OrderByDescending(x => x.CreatedAt)
+                .Select(x => new ResListLoanBorrowerbyId
+                {
+                    LoanId = x.Id,
+                    BorrowerId = x.BorrowerId, // Mengisi BorrowerId
+                    Amount = x.Amount,
+                    InterestRate = x.InterestRate,
+                    Duration = x.Duration,
+                    Status = x.Status,
+                    CreatedAt = x.CreatedAt,
+                    UpdatedAt = x.UpdatedAt
+                }).ToListAsync();
+
+            return listLoan;
+        }
+
+        public async Task<ResListLoanDto1> GetLoanById(string loanId)
+        {
+            var loan = await _peerlandingContext.MstLoans
+                .Include(l => l.User)
+                .SingleOrDefaultAsync(l => l.Id == loanId);
+
+            if (loan == null)
+            {
+                throw new Exception("Loan not found");
+            }
+
+            var result = new ResListLoanDto1
+            {
+                LoanId = loan.Id,
+                User = new User
+                {
+                    Id = loan.User.Id,
+                    Name = loan.User.Name
+                },
+                Amount = loan.Amount,
+                InterestRate = loan.InterestRate,
+                Duration = loan.Duration,
+                Status = loan.Status,
+                CreatedAt = loan.CreatedAt,
+                UpdatedAt = loan.UpdatedAt,
+            };
+
+            return result;
+        }
+
+
+
+
+
     }
 }

@@ -45,28 +45,60 @@ namespace DAL.Repositories.Service
                 .ToListAsync();
         }
 
+        //public async Task<string> Register(ReqRegisterUseerDto register)
+        //{
+        //    var isAnyEmail = await _context.MstUsers.SingleOrDefaultAsync(e => e.Email == register.Email);
+
+        //    if (isAnyEmail != null)
+        //    {
+        //        throw new Exception("Email already used");
+        //    }
+        //    var newUser = new MstUser
+        //    {
+        //        Name = register.Name,
+        //        Email = register.Email,
+        //        Password = BCrypt.Net.BCrypt.HashPassword(register.Password),
+        //        Role = register.Role,
+        //        Balance = register.Balance,
+        //    };
+
+        //    await _context.MstUsers.AddAsync(newUser);
+        //    await _context.SaveChangesAsync();
+
+        //    return newUser.Name;
+        //}
         public async Task<string> Register(ReqRegisterUseerDto register)
         {
+            // Cek apakah email sudah digunakan
             var isAnyEmail = await _context.MstUsers.SingleOrDefaultAsync(e => e.Email == register.Email);
-
             if (isAnyEmail != null)
             {
                 throw new Exception("Email already used");
             }
+            // Validasi role, hanya lender, borrower, atau admin yang diizinkan
+            var validRoles = new[] { "lender", "borrower", "admin" };
+            if (!validRoles.Contains(register.Role.ToLower()))
+            {
+                throw new Exception("Invalid role. Role must be lender, borrower, or admin.");
+            }
+
+            // Set saldo default ke 0 jika tidak disediakan
             var newUser = new MstUser
             {
                 Name = register.Name,
                 Email = register.Email,
                 Password = BCrypt.Net.BCrypt.HashPassword(register.Password),
                 Role = register.Role,
-                Balance = register.Balance,
+                Balance = register.Balance ?? 0 // Set saldo default ke 0
             };
 
+            // Tambahkan user baru ke database
             await _context.MstUsers.AddAsync(newUser);
             await _context.SaveChangesAsync();
 
-            return newUser.Name;
+            return "User registered successfully!";
         }
+
 
         public async Task<ResLoginDto> Login(ReqLoginDto reqLogin)
         {
@@ -85,7 +117,12 @@ namespace DAL.Repositories.Service
                 var token = GenerateJwtToken(user);
                 var loginResponse = new ResLoginDto
                 {
-                    Token = token,
+                    Id = user.Id,
+                    Name = user.Name,
+                    Email = user.Email,
+                    Balance = user.Balance,
+                    Role = user.Role,
+                    Token = token
                 };
 
             return loginResponse;
@@ -104,6 +141,7 @@ namespace DAL.Repositories.Service
                 new Claim(JwtRegisteredClaimNames.Sub, user.Email),
                 new Claim(ClaimTypes.Name, user.Name),
                 new Claim(ClaimTypes.Role, user.Role),
+                new Claim(ClaimTypes.Sid, user.Id),
                 new Claim(JwtRegisteredClaimNames.Jti,Guid.NewGuid().ToString())
             };
 
@@ -154,6 +192,53 @@ namespace DAL.Repositories.Service
             await _context.SaveChangesAsync();
 
             return user.Name;
+        }
+
+        public async Task<ResUserDtobyId> UserList(string id)
+        {
+            var userList = await _context.MstUsers
+                .Where(x => x.Id.Contains(id))
+                  .Select(x => new ResUserDtobyId
+                  {
+                      UserId = x.Id,
+                      Name = x.Name,
+                      Balance = x.Balance,
+                      Role = x.Role
+                  }).FirstOrDefaultAsync();
+            return userList;
+        }
+
+        public async Task<ResUpdateBalance> UpdateBalance(ReqUpdateBalance reqBalance, string id)
+        {
+            var user = await _context.MstUsers.SingleOrDefaultAsync(e => e.Id == id);
+            if (user == null)
+            {
+                throw new Exception("User did not exist");
+            }
+            user.Balance = reqBalance.Balance;
+
+            await _context.SaveChangesAsync();
+
+            var res = new ResUpdateBalance
+            {
+                Balance = reqBalance.Balance,
+            };
+            return res;
+        }
+
+        public async Task<object> CreateFunding(ReqFunding funding)
+        {
+            var newFunding = new TrnFunding
+            {
+                LoanId = funding.LoanId,
+                LenderId = funding.LenderId,
+                Amount = funding.Amount
+            };
+
+            await _context.TrnFundings.AddAsync(newFunding);
+            await _context.SaveChangesAsync();
+
+            return newFunding;
         }
 
     }

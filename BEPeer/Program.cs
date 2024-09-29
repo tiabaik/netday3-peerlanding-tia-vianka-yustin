@@ -77,6 +77,8 @@ builder.Services.AddDbContext<PeerlandingContext>(options =>
 
 builder.Services.AddScoped<IUserServices, UserServices>();
 builder.Services.AddScoped<ILoanSercvices, LoanServices>();
+builder.Services.AddScoped<IFundingServices, FundingServices>();
+builder.Services.AddScoped<IRepaymentServices, RepaymentServices>();
 
 var app = builder.Build();
 
